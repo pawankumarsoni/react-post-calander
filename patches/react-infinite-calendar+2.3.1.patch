@@ -1,18 +1,177 @@
+diff --git a/node_modules/react-infinite-calendar/es/Calendar/index.js b/node_modules/react-infinite-calendar/es/Calendar/index.js
+index 591a897..54d5e8b 100644
+--- a/node_modules/react-infinite-calendar/es/Calendar/index.js
++++ b/node_modules/react-infinite-calendar/es/Calendar/index.js
+@@ -74,9 +74,12 @@ export var withDefaultProps = _defaultProps({
+   YearsComponent: Years
+ });
+ 
++
+ var Calendar = function (_Component) {
+   _inherits(Calendar, _Component);
+   
++  var currentDate = new Date(), firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), setCurrentMonth = firstDay;
++
+   function Calendar(props) {
+     _classCallCheck(this, Calendar);
+ 
+@@ -89,7 +92,6 @@ var Calendar = function (_Component) {
+     _this.getCurrentOffset = function () {
+       return _this.scrollTop;
+     };
+-
+     _this.getDateOffset = function (date) {
+       return _this._MonthList && _this._MonthList.getDateOffset(date);
+     };
+@@ -126,7 +128,7 @@ var Calendar = function (_Component) {
+       _this.scrollTop = scrollTop;
+ 
+       // We only want to display the months overlay if the user is rapidly scrolling
+-      if (showOverlay && scrollSpeed > rowHeight && !isScrolling) {
++      if (showOverlay && scrollSpeed > rowHeight-100 && !isScrolling) {
+         _this.setState({
+           isScrolling: true
+         });
+@@ -210,7 +212,7 @@ var Calendar = function (_Component) {
+   Calendar.prototype.componentDidMount = function componentDidMount() {
+     var autoFocus = this.props.autoFocus;
+     
+-
++    localStorage.setItem("lastMonthOffset", this.getDateOffset(firstDay));
+     if (autoFocus) {
+       this.node.focus();
+     }
+@@ -233,6 +235,10 @@ var Calendar = function (_Component) {
+     }
+   };
+ 
++  Calendar.prototype.updateSetMonth = function updateSetMonth(date) {
++    setCurrentMonth = date;
++  }
++
+   Calendar.prototype.updateYears = function updateYears() {
+     var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.props;
+ 
+@@ -285,7 +291,6 @@ var Calendar = function (_Component) {
+   Calendar.prototype.render = function render() {
+     var _classNames,
+         _this2 = this;
+-
+     var _props2 = this.props,
+         className = _props2.className,
+         passThrough = _props2.passThrough,
+@@ -299,7 +304,10 @@ var Calendar = function (_Component) {
+         selected = _props2.selected,
+         tabIndex = _props2.tabIndex,
+         width = _props2.width,
+-        YearsComponent = _props2.YearsComponent;
++        YearsComponent = _props2.YearsComponent,
++        data = _props2.data,
++        callApi = _props2.callApi,
++        legends = _props2.legends;
+ 
+     var _getDisplayOptions = this.getDisplayOptions(),
+         hideYearsOnSelect = _getDisplayOptions.hideYearsOnSelect,
+@@ -321,7 +329,6 @@ var Calendar = function (_Component) {
+     var locale = this.getLocale();
+     var theme = this.getTheme();
+     var today = this.today = startOfDay(new Date());
+-
+     return React.createElement(
+       'div',
+       _extends({
+@@ -343,11 +350,12 @@ var Calendar = function (_Component) {
+         setDisplay: this.setDisplay,
+         dateFormat: locale.headerFormat,
+         display: display,
+-        displayDate: displayDate
++        displayDate: displayDate,
++        setCurrentMonth: setCurrentMonth
+       }, passThrough.Header)),
+       React.createElement(
+         'div',
+-        { className: styles.container.wrapper },
++        { className: styles.container.wrapper, id: styles.container.wrapper },
+         showWeekdays && React.createElement(Weekdays, { weekdays: locale.weekdays, weekStartsOn: locale.weekStartsOn, theme: theme }),
+         React.createElement(
+           'div',
+@@ -382,7 +390,11 @@ var Calendar = function (_Component) {
+             selected: selected,
+             scrollDate: scrollDate,
+             showOverlay: showOverlay,
+-            width: width
++            width: width,
++            data: data,
++            callApi: callApi,
++            updateSetMonth: this.updateSetMonth,
++            legends: legends
+           })
+         ),
+         display === 'years' && React.createElement(YearsComponent, _extends({
+@@ -471,4 +483,3 @@ process.env.NODE_ENV !== "production" ? Calendar.propTypes = {
+   width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+   YearsComponent: PropTypes.func
+ } : void 0;
+-;
+\ No newline at end of file
 diff --git a/node_modules/react-infinite-calendar/es/Day/index.js b/node_modules/react-infinite-calendar/es/Day/index.js
-index 76c1ec4..600a1db 100644
+index 76c1ec4..8ba786e 100644
 --- a/node_modules/react-infinite-calendar/es/Day/index.js
 +++ b/node_modules/react-infinite-calendar/es/Day/index.js
-@@ -112,30 +112,43 @@ var Day = function (_PureComponent) {
+@@ -28,7 +28,7 @@ var styles = {
+ 
+ var Day = function (_PureComponent) {
+   _inherits(Day, _PureComponent);
+-
++    var setLegends = true, resultantLegends;
+   function Day() {
+     var _temp, _this, _ret;
+ 
+@@ -102,7 +102,9 @@ var Day = function (_PureComponent) {
+         _props2$theme = _props2.theme,
+         selectionColor = _props2$theme.selectionColor,
+         todayColor = _props2$theme.todayColor,
+-        year = _props2.year;
++        year = _props2.year,
++        data = _props2.data || {},
++        legends = _props2.legends;
+ 
+     var color = void 0;
+ 
+@@ -112,31 +114,44 @@ var Day = function (_PureComponent) {
        color = todayColor;
      }
  
--    return React.createElement(
++    var RatingStars = []
++    for (var i = 0; i < data.Rating; i++) {
++        RatingStars.push(React.createElement("i", {
++            className: "fa fa-star checked",
++            key: "rate_" + Date.now() + i
++          }))
++    }
++    for (var i = 0; i < 5 - data.Rating; i++) {
++        RatingStars.push(React.createElement("i", {
++            className: "fa fa-star",
++            key: "rate_0" + Date.now() + i
++          }))
++    }
++
++    if(!(data && data.legends)) {
++        data.legends = []
++        data.legends.push(React.createElement("div", {
++            className: "m-17",
++          }))
++    }
++
+     return React.createElement(
 -      'li',
 -      _extends({
--        style: color ? { color: color } : null,
--        className: classNames(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
--        onClick: this.handleClick,
--        'data-date': date
++    "li",
++    _extends({
+         style: color ? { color: color } : null,
+         className: classNames(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
+         onClick: this.handleClick,
+         'data-date': date
 -      }, handlers),
 -      day === 1 && React.createElement(
 -        'span',
@@ -30,46 +189,365 @@ index 76c1ec4..600a1db 100644
 -        year
 -      ),
 -      isSelected && this.renderSelection()
-+    React.createElement(
-+        "li",
-+        _extends({
-+            style: color ? { color: color } : null,
-+            className: (0, _classnames2.default)(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
-+            onClick: this.handleClick,
-+            'data-date': date
-+          }, handlers),
-+        React.createElement(
-+            "div",
-+            { className: "d-flex" },
-+            React.createElement(
-+                "div",
-+                { className: "pull-left" },
-+                "*****"
-+            ),
-+            React.createElement(
-+                "div",
-+                { className: "pull-right" },
-+                "17"
-+            )
-+        ),
-+        React.createElement("div", { className: "event-img", style: { background: `url(${'https://ik.imagekit.io/bj96n986jb/dev/LCk7hBhnQK3_g68YJM7PY'})`, width: '150px', height: '200px' } }),
-+        React.createElement(
-+            "div",
-+            { className: "legends" },
-+            React.createElement(
-+                "span",
-+                null,
-+                "PR"
-+            ),
-+            React.createElement(
-+                "span",
-+                null,
-+                "GT"
-+            )
-+        )
+-    );
++    }, handlers),
++    React.createElement("div", {style: {height: '290px'}}, React.createElement("div", {
++        className: "d-flex custom-style-day fix-height"
++      }, React.createElement("div", null, RatingStars),React.createElement("div", {
++        className: ""
++      }, day)), React.createElement("div", {
++        className: "post-bg-img",
++        style: {background: `url(${data.Images && data.Images[0] && data.Images[0].ImageUrl})`}
++      }), React.createElement("div", {className: "m-t-25 d-flex height-25"}, data.legends))
++    )
+   };
+ 
+   return Day;
+diff --git a/node_modules/react-infinite-calendar/es/Header/defaultSelectionRenderer.js b/node_modules/react-infinite-calendar/es/Header/defaultSelectionRenderer.js
+index 0ae3897..054850a 100644
+--- a/node_modules/react-infinite-calendar/es/Header/defaultSelectionRenderer.js
++++ b/node_modules/react-infinite-calendar/es/Header/defaultSelectionRenderer.js
+@@ -13,7 +13,8 @@ var styles = {
+   'active': 'Cal__Header__active',
+   'year': 'Cal__Header__year',
+   'date': 'Cal__Header__date',
+-  'range': 'Cal__Header__range'
++  'range': 'Cal__Header__range',
++  'todayDate': 'Cal__TodayDate'
+ };
+ var animation = {
+   'enter': 'Cal__Animation__enter',
+@@ -31,19 +32,10 @@ export default function defaultSelectionRenderer(value, _ref) {
+       onYearClick = _ref.onYearClick,
+       scrollToDate = _ref.scrollToDate,
+       setDisplay = _ref.setDisplay,
+-      shouldAnimate = _ref.shouldAnimate;
+-
++      shouldAnimate = _ref.shouldAnimate,
++      currentMonthFirstDay = _ref.setCurrentMonth;
+   var date = parse(value);
+   var values = date && [{
+-    active: display === 'years',
+-    handleClick: function handleClick(e) {
+-      onYearClick(date, e, key);
+-      setDisplay('years');
+-    },
+-    item: 'year',
+-    title: display === 'days' ? 'Change year' : null,
+-    value: date.getFullYear()
+-  }, {
+     active: display === 'days',
+     handleClick: function handleClick(e) {
+       if (display !== 'days') {
+@@ -54,7 +46,7 @@ export default function defaultSelectionRenderer(value, _ref) {
+     },
+     item: 'day',
+     title: display === 'days' ? 'Scroll to ' + format(date, dateFormat, { locale: locale }) : null,
+-    value: format(date, dateFormat, { locale: locale })
++    value: format(date, "MMMM, YYYY", { locale: locale })
+   }];
+ 
+   return React.createElement(
+@@ -99,9 +91,17 @@ export default function defaultSelectionRenderer(value, _ref) {
+               onClick: handleClick
+             },
+             value
++          ),
++          React.createElement(
++            'button',
++            {
++              className: styles.todayDate,
++              onClick: handleClick
++            },
++            'today'
+           )
+         )
+-      );
++      )
+     })
+   );
+ }
+\ No newline at end of file
+diff --git a/node_modules/react-infinite-calendar/es/Header/index.js b/node_modules/react-infinite-calendar/es/Header/index.js
+index ed61242..e68ff76 100644
+--- a/node_modules/react-infinite-calendar/es/Header/index.js
++++ b/node_modules/react-infinite-calendar/es/Header/index.js
+@@ -42,7 +42,6 @@ var Header = (_temp = _class = function (_PureComponent) {
+         renderSelection = _props.renderSelection,
+         theme = _props.theme;
+ 
+-
+     return React.createElement(
+       'div',
+       {
+diff --git a/node_modules/react-infinite-calendar/es/Month/index.js b/node_modules/react-infinite-calendar/es/Month/index.js
+index 709746c..9b81d11 100644
+--- a/node_modules/react-infinite-calendar/es/Month/index.js
++++ b/node_modules/react-infinite-calendar/es/Month/index.js
+@@ -12,6 +12,7 @@ import { getDateString } from '../utils';
+ import format from 'date-fns/format';
+ import getDay from 'date-fns/get_day';
+ import isSameYear from 'date-fns/is_same_year';
++
+ var styles = {
+   'rows': 'Cal__Month__rows',
+   'row': 'Cal__Month__row',
+@@ -19,7 +20,7 @@ var styles = {
+   'label': 'Cal__Month__label',
+   'partialFirstRow': 'Cal__Month__partialFirstRow'
+ };
+-
++var CURRENT_MONTH_INIT = 0;
+ var Month = function (_PureComponent) {
+   _inherits(Month, _PureComponent);
+ 
+@@ -43,8 +44,10 @@ var Month = function (_PureComponent) {
+         selected = _props.selected,
+         today = _props.today,
+         theme = _props.theme,
+-        passThrough = _props.passThrough;
+-
++        passThrough = _props.passThrough,
++        data = _props.data,
++        legends = _props.legends,
++        itemCount = _props.itemCount; 
+     var currentYear = today.getFullYear();
+     var year = monthDate.getFullYear();
+     var month = monthDate.getMonth();
+@@ -57,16 +60,23 @@ var Month = function (_PureComponent) {
+         days = void 0,
+         dow = void 0,
+         row = void 0;
++    CURRENT_MONTH_INIT++;
+ 
++    if(CURRENT_MONTH_INIT == 3) {
++    }
++    if(CURRENT_MONTH_INIT >= 7) {
++        CURRENT_MONTH_INIT = -1;
++    }
++    if(CURRENT_MONTH_INIT == 6) {
++        CURRENT_MONTH_INIT = 0;
++    }
+     // Used for faster comparisons
+     var _today = format(today, 'YYYY-MM-DD');
+     var _minDate = format(minDate, 'YYYY-MM-DD');
+     var _maxDate = format(maxDate, 'YYYY-MM-DD');
+-
+     // Oh the things we do in the name of performance...
+     for (var i = 0, len = rows.length; i < len; i++) {
+       var _classNames;
+-
+       row = rows[i];
+       days = [];
+       dow = getDay(new Date(year, month, row[0]));
+@@ -79,6 +89,17 @@ var Month = function (_PureComponent) {
+ 
+         isDisabled = minDate && date < _minDate || maxDate && date > _maxDate || disabledDays && disabledDays.length && disabledDays.indexOf(dow) !== -1 || disabledDates && disabledDates.length && disabledDates.indexOf(date) !== -1;
+ 
++        data = data.length && data || []
++        const single_post = data.length && data.find((post)=>{
++            const post_date = new Date(post.CalendarDateTime)
++            const month = post_date && post_date.getMonth() + 1;
++            const day = post_date && String(post_date.getDate()).padStart(2, '0');
++            const year = post_date && post_date.getFullYear();
++            const output = year  + '-'+ month  + '-' + day;
++            return output == date
++        }) || {};
++
++
+         days[k] = React.createElement(DayComponent, _extends({
+           key: 'day-' + day,
+           currentYear: currentYear,
+@@ -91,7 +112,9 @@ var Month = function (_PureComponent) {
+           month: month,
+           monthShort: monthShort,
+           theme: theme,
+-          year: year
++          year: year,
++          data: single_post,
++          legends: legends
+         }, passThrough.Day));
+ 
+         dow += 1;
+@@ -123,7 +146,8 @@ var Month = function (_PureComponent) {
+         rowHeight = _props2.rowHeight,
+         showOverlay = _props2.showOverlay,
+         style = _props2.style,
+-        theme = _props2.theme;
++        theme = _props2.theme,
++        data = _props2.data
+ 
+     var dateFormat = isSameYear(monthDate, today) ? 'MMMM' : 'MMMM YYYY';
+ 
+diff --git a/node_modules/react-infinite-calendar/es/MonthList/index.js b/node_modules/react-infinite-calendar/es/MonthList/index.js
+index 8e68e68..0c5af7f 100644
+--- a/node_modules/react-infinite-calendar/es/MonthList/index.js
++++ b/node_modules/react-infinite-calendar/es/MonthList/index.js
+@@ -20,13 +20,13 @@ var styles = {
+ };
+ 
+ 
+-var AVERAGE_ROWS_PER_MONTH = 5;
++var AVERAGE_ROWS_PER_MONTH = 5, CURRENT_MONTH_INIT = 0;
+ 
+ var MonthList = function (_Component) {
+   _inherits(MonthList, _Component);
+ 
+   function MonthList() {
+-    var _temp, _this, _ret;
++    var _temp, _this, _ret, current_offset_val = -1, current_offset_val2 = -1;
+ 
+     _classCallCheck(this, MonthList);
+ 
+@@ -59,7 +59,6 @@ var MonthList = function (_Component) {
+         var _months$index = months[index],
+             month = _months$index.month,
+             year = _months$index.year;
+-
+         var weeks = getWeeksInMonth(month, year, weekStartsOn, index === months.length - 1);
+         var height = weeks * rowHeight;
+         _this.monthHeights[index] = height;
+@@ -72,7 +71,6 @@ var MonthList = function (_Component) {
+       }
+ 
+       var _this2;
+-
+       var offset = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+ 
+       var offsetTop = _this.getDateOffset(date);
+@@ -108,7 +106,8 @@ var MonthList = function (_Component) {
+           onComplete();
+         });
+       }
+-    }, _this.renderMonth = function (_ref) {
++    }, _this.renderMonth = function (_ref, itemCount) {
++        CURRENT_MONTH_INIT++;
+       var index = _ref.index,
+           style = _ref.style;
+       var _this$props2 = _this.props,
+@@ -124,16 +123,28 @@ var MonthList = function (_Component) {
+           selected = _this$props2.selected,
+           showOverlay = _this$props2.showOverlay,
+           theme = _this$props2.theme,
+-          today = _this$props2.today;
++          today = _this$props2.today,
++          data = _this$props2.data,
++          callApi = _this$props2.callApi,
++          updateSetMonth = _this$props2.updateSetMonth,
++          legends = _this$props2.legends;
+       var _months$index2 = months[index],
+           month = _months$index2.month,
+           year = _months$index2.year;
+-
+       var key = year + ':' + month;
+ 
+       var _this$memoize = _this.memoize(key),
+           date = _this$memoize.date,
+           rows = _this$memoize.rows;
++          var current_key = months[index+2].year + ":" + months[index+2].month;
++          var current_month_date = _this.memoize(current_key).date;
++          var current_offset = _this.getDateOffset(current_month_date);
++
++          if(current_offset != current_offset_val &&  current_offset < localStorage.getItem("lastMonthOffset")) {
++            current_offset_val = current_offset;
++            localStorage.setItem("lastMonthOffset", current_offset_val)
++            callApi()
++          } 
+         
+       return React.createElement(Month, _extends({
+         key: key,
+@@ -152,7 +163,11 @@ var MonthList = function (_Component) {
+         theme: theme,
+         style: style,
+         locale: locale,
+-        passThrough: passThrough
++        passThrough: passThrough, 
++        getDateOffset: _this.getDateOffset,
++        data: data,
++        legends: legends,
++        itemCount: itemCount
+       }, passThrough.Month));
+     }, _temp), _possibleConstructorReturn(_this, _ret);
+   }
+@@ -177,9 +192,7 @@ var MonthList = function (_Component) {
+         rowHeight = _props.rowHeight,
+         weekStartsOn = _props.locale.weekStartsOn,
+         height = _props.height;
+-
+     var weeks = getWeek(startOfMonth(min), parse(date), weekStartsOn);
+-
+     return weeks * rowHeight - (height - rowHeight / 2) / 2;
+   };
+ 
+@@ -195,8 +208,6 @@ var MonthList = function (_Component) {
+         rowHeight = _props2.rowHeight,
+         width = _props2.width;
+     var scrollTop = this.state.scrollTop;
+-
+-
+     return React.createElement(VirtualList, {
+       ref: this._getRef,
+       width: width,
+@@ -235,5 +246,7 @@ process.env.NODE_ENV !== "production" ? MonthList.propTypes = {
+   showOverlay: PropTypes.bool,
+   theme: PropTypes.object,
+   today: PropTypes.instanceOf(Date),
+-  width: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
++  width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
++  data: PropTypes.array,
++  legends: PropTypes.array
+ } : void 0;
+\ No newline at end of file
+diff --git a/node_modules/react-infinite-calendar/es/Today/index.js b/node_modules/react-infinite-calendar/es/Today/index.js
+index 3b3700e..9fdcd25 100644
+--- a/node_modules/react-infinite-calendar/es/Today/index.js
++++ b/node_modules/react-infinite-calendar/es/Today/index.js
+@@ -50,31 +50,8 @@ var Today = function (_PureComponent) {
+ 
+     return React.createElement(
+       'div',
+-      {
+-        className: classNames(styles.root, (_classNames = {}, _classNames[styles.show] = show, _classNames[styles.chevronUp] = show === DIRECTION_UP, _classNames[styles.chevronDown] = show === DIRECTION_DOWN, _classNames)),
+-        style: {
+-          backgroundColor: theme.floatingNav.background,
+-          color: theme.floatingNav.color
+-        },
+-        onClick: this.scrollToToday,
+-        ref: 'node'
+-      },
+-      todayLabel,
+-      React.createElement(
+-        'svg',
+-        {
+-          className: styles.chevron,
+-          x: '0px',
+-          y: '0px',
+-          width: '14px',
+-          height: '14px',
+-          viewBox: '0 0 512 512'
+-        },
+-        React.createElement('path', {
+-          fill: theme.floatingNav.chevron || theme.floatingNav.color,
+-          d: CHEVRON
+-        })
+-      )
++      null,
++      ''
      );
    };
  
+diff --git a/node_modules/react-infinite-calendar/es/index.js b/node_modules/react-infinite-calendar/es/index.js
+index 5f612f5..16a5d3c 100644
+--- a/node_modules/react-infinite-calendar/es/index.js
++++ b/node_modules/react-infinite-calendar/es/index.js
+@@ -43,7 +43,6 @@ var DefaultCalendar = (_temp2 = _class = function (_Component) {
+           onSelect = _this$props.onSelect,
+           interpolateSelection = _this$props.interpolateSelection;
+ 
+-
+       if (typeof onSelect === 'function') {
+         onSelect(selected);
+       }
 diff --git a/node_modules/react-infinite-calendar/lib/Day/index.js b/node_modules/react-infinite-calendar/lib/Day/index.js
 index 9ce47c6..431b90e 100644
 --- a/node_modules/react-infinite-calendar/lib/Day/index.js
@@ -160,10 +638,116 @@ index 9ce47c6..431b90e 100644
    };
  
 diff --git a/node_modules/react-infinite-calendar/styles.css b/node_modules/react-infinite-calendar/styles.css
-index 31558df..6b8ceb8 100644
+index 31558df..9d3f80f 100644
 --- a/node_modules/react-infinite-calendar/styles.css
 +++ b/node_modules/react-infinite-calendar/styles.css
-@@ -540,3 +540,21 @@
+@@ -6,7 +6,10 @@
+   font-size: 16px;
+   text-align: center;
+   cursor: pointer;
+-  user-select: none; }
++  user-select: none;
++  border: 1px solid #f2f2f2 !important;
++  line-height: 0px !important;
++}
+   .Cal__Day__root.Cal__Day__enabled.Cal__Day__highlighted, .Cal__Day__root.Cal__Day__enabled:active, .Cal__Day__root.Cal__Day__enabled:hover {
+     position: relative;
+     z-index: 1; }
+@@ -26,8 +29,8 @@
+     opacity: 0.5; }
+   .Cal__Day__root.Cal__Day__enabled.Cal__Day__highlighted:before, .Cal__Day__root.Cal__Day__enabled:active:before {
+     opacity: 1; }
+-  .Cal__Day__root:first-child {
+-    position: relative; }
++  /* .Cal__Day__root:first-child {
++    position: absolute; } */
+   .Cal__Day__root.Cal__Day__today {
+     position: relative;
+     z-index: 2; }
+@@ -49,8 +52,23 @@
+       z-index: -1; }
+     .Cal__Day__root.Cal__Day__today.Cal__Day__disabled:before {
+       box-shadow: inset 0 0 0 1px #BBB; }
++      .Cal__Day__root.Cal__Day__today .custom-fill-color {
++        border-radius: 50%;
++        width: 25px;
++        height: 25px;
++        background: red;
++        padding-top: 12px;
++    }
+   .Cal__Day__root.Cal__Day__selected {
+     position: relative; }
++    .Cal__Day__root.Cal__Day__selected  .custom-fill-color{
++        border-radius: 50%;
++        width: 25px;
++        height: 25px;
++        background: green;
++        padding-top: 12px;
++     }
++        
+     .Cal__Day__root.Cal__Day__selected > .Cal__Day__month, .Cal__Day__root.Cal__Day__selected > .Cal__Day__year {
+       display: none; }
+     .Cal__Day__root.Cal__Day__selected:before {
+@@ -152,6 +170,7 @@
+ .Cal__Container__root {
+   position: relative;
+   display: table;
++  width: 100% !important;
+   z-index: 1;
+   font: 14px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+   line-height: 1.4em;
+@@ -173,7 +192,7 @@
+ 
+ .Cal__Container__listWrapper {
+   position: relative;
+-  overflow: hidden;
++  /* overflow: hidden; */
+   background-color: #FFF; }
+ .Cal__Header__root {
+   position: relative;
+@@ -189,7 +208,7 @@
+   border-top-right-radius: 3px; }
+   .Cal__Header__root.Cal__Header__landscape {
+     align-items: flex-start;
+-    min-width: 200px;
++    /* min-width: 200px; */
+     border-top-right-radius: 0;
+     border-bottom-left-radius: 3px; }
+     .Cal__Header__root.Cal__Header__landscape .Cal__Header__dateWrapper.Cal__Header__day {
+@@ -294,8 +313,10 @@
+     transform: rotate(360deg); }
+ .Cal__MonthList__root {
+   width: 100% !important;
++  /* height: 1000px !important; */
+   background-color: #FFF;
+-  -webkit-overflow-scrolling: touch; }
++  -webkit-overflow-scrolling: touch;
++   }
+   .Cal__MonthList__root.Cal__MonthList__scrolling > div {
+     pointer-events: none; }
+   .Cal__MonthList__root.Cal__MonthList__scrolling label {
+@@ -495,12 +516,17 @@
+   opacity: 0;
+   transition: opacity 0.3s ease; }
+ .Cal__Month__rows {
+-  position: relative;
+-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.05) 100%); }
++  position: initial;
++  /* background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.05) 100%); 
++  height: 100% !important;   */
++}
+ 
+ .Cal__Month__row {
++  /* height: 200px !important;  */
++  position: inherit;
+   padding: 0;
+-  margin: 0; }
++  margin: 0;
++ }
+   .Cal__Month__row:first-child {
+     text-align: right; }
+     .Cal__Month__row:first-child li {
+@@ -540,3 +566,95 @@
      text-transform: capitalize; }
    .Cal__Month__label.Cal__Month__partialFirstRow {
      top: 56px; }
@@ -184,5 +768,79 @@ index 31558df..6b8ceb8 100644
 +    color: #fff;
 +    padding: 10px;
 +    margin: 10px;
++}
++
++.fix-height{
++    height: 57px;
++}
++
++.day-card {
++    position: relative;
++    text-align: left;
++}
++
++.img-wrapper {
++    position: relative;
++}
++
++.post-bg-img {
++    width: 141px;
++    height: 168px;
++    margin: auto,
++}
++
++.day-min-desc {
++    margin: 10px 10px 30px 10px;
++}
++
++.rating {
++    width: 50%;
++}
++
++.post-day {
++    position: relative;
++    right: 0;
++    width: 50%;
++    display: inline-block;
++}
++
++.custom-style-day {
++    justify-content: space-around;
++    align-items: center;
++    height: 57px;
++}
++
++.m-t-25 {
++    margin-top: 25px !important;
++}
++
++.legends-style {
++    border-radius: 50%;
++    width: 25px;
++    height: 25px;
++    border-radius: 50%;
++    margin: auto;
++    padding-top: 10px;
++    border: 1px solid;
++    background: black;
++}
++
++.fa.fa-star {
++    color: #f2f2f2 !important;
++}
++
++.fa.fa-star.checked {
++    color: #00BFFF !important;
++}
++
++.Cal__TodayDate {
++    position: fixed;
++    right: 50px;
++    font-size: 20px;
++    height: 40px;
++}
++
++.m-17 {
++    margin: 17px !important;
 +}
 \ No newline at end of file
