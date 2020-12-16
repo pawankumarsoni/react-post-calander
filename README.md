@@ -14,3 +14,6 @@
 3) npm install 
 4) npm run start
 5) now open google chrome and run http://localhost:8080/calander
+
+### Note
+Usually, should not push .env file.
