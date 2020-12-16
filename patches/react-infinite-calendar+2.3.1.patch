@@ -1,0 +1,188 @@
+diff --git a/node_modules/react-infinite-calendar/es/Day/index.js b/node_modules/react-infinite-calendar/es/Day/index.js
+index 76c1ec4..600a1db 100644
+--- a/node_modules/react-infinite-calendar/es/Day/index.js
++++ b/node_modules/react-infinite-calendar/es/Day/index.js
+@@ -112,30 +112,43 @@ var Day = function (_PureComponent) {
+       color = todayColor;
+     }
+ 
+-    return React.createElement(
+-      'li',
+-      _extends({
+-        style: color ? { color: color } : null,
+-        className: classNames(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
+-        onClick: this.handleClick,
+-        'data-date': date
+-      }, handlers),
+-      day === 1 && React.createElement(
+-        'span',
+-        { className: styles.month },
+-        monthShort
+-      ),
+-      isToday ? React.createElement(
+-        'span',
+-        null,
+-        day
+-      ) : day,
+-      day === 1 && currentYear !== year && React.createElement(
+-        'span',
+-        { className: styles.year },
+-        year
+-      ),
+-      isSelected && this.renderSelection()
++    React.createElement(
++        "li",
++        _extends({
++            style: color ? { color: color } : null,
++            className: (0, _classnames2.default)(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
++            onClick: this.handleClick,
++            'data-date': date
++          }, handlers),
++        React.createElement(
++            "div",
++            { className: "d-flex" },
++            React.createElement(
++                "div",
++                { className: "pull-left" },
++                "*****"
++            ),
++            React.createElement(
++                "div",
++                { className: "pull-right" },
++                "17"
++            )
++        ),
++        React.createElement("div", { className: "event-img", style: { background: `url(${'https://ik.imagekit.io/bj96n986jb/dev/LCk7hBhnQK3_g68YJM7PY'})`, width: '150px', height: '200px' } }),
++        React.createElement(
++            "div",
++            { className: "legends" },
++            React.createElement(
++                "span",
++                null,
++                "PR"
++            ),
++            React.createElement(
++                "span",
++                null,
++                "GT"
++            )
++        )
+     );
+   };
+ 
+diff --git a/node_modules/react-infinite-calendar/lib/Day/index.js b/node_modules/react-infinite-calendar/lib/Day/index.js
+index 9ce47c6..431b90e 100644
+--- a/node_modules/react-infinite-calendar/lib/Day/index.js
++++ b/node_modules/react-infinite-calendar/lib/Day/index.js
+@@ -26,7 +26,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
+ function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+ 
+ var styles = {
+-  'root': 'Cal__Day__root',
++  'root': 'Cal__Day__root Cal__Day__Custom__Style',
+   'enabled': 'Cal__Day__enabled',
+   'highlighted': 'Cal__Day__highlighted',
+   'today': 'Cal__Day__today',
+@@ -39,7 +39,8 @@ var styles = {
+   'range': 'Cal__Day__range',
+   'start': 'Cal__Day__start',
+   'end': 'Cal__Day__end',
+-  'betweenRange': 'Cal__Day__betweenRange'
++  'betweenRange': 'Cal__Day__betweenRange',
++  'dFlex': 'Cal__Day__'
+ };
+ 
+ var Day = function (_PureComponent) {
+@@ -129,29 +130,42 @@ var Day = function (_PureComponent) {
+     }
+ 
+     return _react2.default.createElement(
+-      'li',
+-      _extends({
+-        style: color ? { color: color } : null,
+-        className: (0, _classnames2.default)(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
+-        onClick: this.handleClick,
+-        'data-date': date
+-      }, handlers),
+-      day === 1 && _react2.default.createElement(
+-        'span',
+-        { className: styles.month },
+-        monthShort
+-      ),
+-      isToday ? _react2.default.createElement(
+-        'span',
+-        null,
+-        day
+-      ) : day,
+-      day === 1 && currentYear !== year && _react2.default.createElement(
+-        'span',
+-        { className: styles.year },
+-        year
+-      ),
+-      isSelected && this.renderSelection()
++        "li",
++        _extends({
++            style: color ? { color: color } : null,
++            className: (0, _classnames2.default)(styles.root, (_classNames = {}, _classNames[styles.today] = isToday, _classNames[styles.highlighted] = isHighlighted, _classNames[styles.selected] = isSelected, _classNames[styles.disabled] = isDisabled, _classNames[styles.enabled] = !isDisabled, _classNames), className),
++            onClick: this.handleClick,
++            'data-date': date
++          }, handlers),
++        _react2.default.createElement(
++            "div",
++            { className: "d-flex" },
++            _react2.default.createElement(
++                "div",
++                { className: "pull-left" },
++                "*****"
++            ),
++            _react2.default.createElement(
++                "div",
++                { className: "pull-right" },
++                "17"
++            )
++        ),
++        _react2.default.createElement("div", { className: "event-img", style: { background: `url(${'https://ik.imagekit.io/bj96n986jb/dev/LCk7hBhnQK3_g68YJM7PY'})`, width: '150px', height: '200px' } }),
++        _react2.default.createElement(
++            "div",
++            { className: "Cal__Day__Card__Legends" },
++            _react2.default.createElement(
++                "span",
++                null,
++                "PR"
++            ),
++            _react2.default.createElement(
++                "span",
++                null,
++                "GT"
++            )
++        )
+     );
+   };
+ 
+diff --git a/node_modules/react-infinite-calendar/styles.css b/node_modules/react-infinite-calendar/styles.css
+index 31558df..6b8ceb8 100644
+--- a/node_modules/react-infinite-calendar/styles.css
++++ b/node_modules/react-infinite-calendar/styles.css
+@@ -540,3 +540,21 @@
+     text-transform: capitalize; }
+   .Cal__Month__label.Cal__Month__partialFirstRow {
+     top: 56px; }
++.Cal__Day__Custom__Style {
++    border-radius: 5px;
++    background-color: #fff;
++    border: 1px solid #c0ab89;
++    padding: 20px;
++    cursor: pointer;
++    list-style-type: none;
++}
++.Cal__Day__Card__Legends {
++    line-height: 60px;
++    background: #c0ab89;
++    border-radius: 50%;
++    text-align: center;
++    font-weight: 700;
++    color: #fff;
++    padding: 10px;
++    margin: 10px;
++}
+\ No newline at end of file
